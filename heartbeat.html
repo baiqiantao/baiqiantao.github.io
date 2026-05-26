@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的心儿蹦蹦跳 - 白昊辰</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&family=Noto+Serif+SC:wght@400;700&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=ZCOOL+QingKe+HuangYou&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+            overflow: hidden;
+        }
+
+        #startBtn {
+            padding: 18px 50px;
+            font-size: 20px;
+            border: 2px solid rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border-radius: 50px;
+            cursor: pointer;
+            letter-spacing: 4px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+            z-index: 10;
+        }
+        #startBtn:hover { background: rgba(255,255,255,0.25); transform: scale(1.05); }
+
+        /* --- 右上角控制栏 --- */
+        .top-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: none;
+            gap: 10px;
+            z-index: 20;
+        }
+        .top-controls.show { display: flex; }
+        .ctrl-btn {
+            width: 44px;
+            height: 44px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.7);
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(6px);
+            transition: all 0.3s;
+            position: relative;
+        }
+        .ctrl-btn:hover { background: rgba(255,255,255,0.18); }
+        .ctrl-btn.on { border-color: rgba(102,126,234,0.6); color: #fff; }
+        .ctrl-btn .tip {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            white-space: nowrap;
+            color: rgba(255,255,255,0.5);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .ctrl-btn:hover .tip { opacity: 1; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .ctrl-btn.music-on { animation: spin 3s linear infinite; }
+
+        /* --- 字体选择栏 --- */
+        .font-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 12px;
+            z-index: 20;
+            background: rgba(0,0,0,0.35);
+            padding: 10px 20px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .font-bar.show { display: flex; }
+        .font-btn {
+            padding: 6px 16px;
+            font-size: 15px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: transparent;
+            color: rgba(255,255,255,0.35);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .font-btn:hover { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.3); }
+        .font-btn.active {
+            color: #fff;
+            border-color: rgba(102,126,234,0.7);
+            background: rgba(102,126,234,0.25);
+        }
+
+        /* --- 舞台 --- */
+        .stage {
+            display: none;
+            width: 100%;
+            min-height: 100vh;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 20px 80px;
+        }
+
+        .title-area {
+            text-align: center;
+            margin-bottom: 40px;
+            min-height: 120px;
+        }
+        .title-area h1 {
+            font-size: 64px;
+            color: #fff;
+            font-weight: bold;
+            letter-spacing: 12px;
+            text-shadow: 0 0 40px rgba(255, 200, 100, 0.5), 0 0 80px rgba(102, 126, 234, 0.4);
+            min-height: 80px;
+        }
+        .title-area .author {
+            font-size: 22px;
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 4px;
+            margin-top: 16px;
+        }
+
+        /* --- 3行字幕区 --- */
+        .text-area {
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 220px;
+        }
+        .text-area .line {
+            font-size: 28px;
+            line-height: 1.8;
+            color: #fff;
+            min-height: 50px;
+            transition: all 0.5s;
+            width: 100%;
+        }
+        .line-prev { opacity: 0.3; font-size: 22px; }
+        .line-current { opacity: 1; font-size: 28px; }
+        .line-next { opacity: 0.25; font-size: 22px; }
+        .line-empty { min-height: 30px; }
+
+        .char {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: charIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes charIn {
+            0%   { opacity: 0; transform: translateY(30px); }
+            60%  { opacity: 1; transform: translateY(-4px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- 进度滑动条 --- */
+        .seek-bar-wrap {
+            position: fixed;
+            bottom: 96px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            max-width: 90vw;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            z-index: 20;
+        }
+        .seek-bar-wrap.show { display: flex; }
+        .seek-bar-wrap .line-num {
+            color: rgba(255,255,255,0.4);
+            font-size: 13px;
+            min-width: 50px;
+            text-align: center;
+            user-select: none;
+        }
+        .seek-bar {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+        .seek-bar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 0 8px rgba(102,126,234,0.5);
+        }
+        .seek-bar::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+        .seek-bar:active::-webkit-slider-thumb {
+            transform: scale(1.2);
+        }
+
+        .hint {
+            color: rgba(255,255,255,0.3);
+            font-size: 14px;
+            margin-top: 16px;
+            letter-spacing: 2px;
+        }
+
+        .end-decoration {
+            color: rgba(255,255,255,0.4);
+            font-size: 22px;
+            letter-spacing: 15px;
+            margin-top: 30px;
+            display: none;
+        }
+        .end-decoration.show { display: block; animation: fadeIn 1.5s ease forwards; }
+
+        #replayBtn {
+            display: none;
+            margin-top: 30px;
+            padding: 14px 40px;
+            font-size: 18px;
+            border: 2px solid rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            border-radius: 50px;
+            cursor: pointer;
+            letter-spacing: 4px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+            animation: fadeIn 1.5s ease forwards;
+        }
+        #replayBtn:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .particles {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .particle {
+            position: absolute;
+            width: 4px; height: 4px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            animation: float linear infinite;
+        }
+        @keyframes float {
+            0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 1; }
+            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+
+    <button id="startBtn">点击开始</button>
+
+    <div class="top-controls" id="topControls">
+        <button class="ctrl-btn on" id="voiceBtn" title="朗诵开关">
+            <span>&#9834;</span>
+            <span class="tip">朗诵</span>
+        </button>
+        <button class="ctrl-btn on music-on" id="musicBtn" title="音乐开关">
+            <span>&#9835;</span>
+            <span class="tip">音乐</span>
+        </button>
+    </div>
+
+    <div class="stage" id="stage">
+        <div class="title-area">
+            <h1 id="titleEl"></h1>
+            <div class="author" id="authorEl"></div>
+        </div>
+
+        <div class="text-area" id="textArea">
+            <div class="line line-prev" id="linePrev"></div>
+            <div class="line line-current" id="lineCur"></div>
+            <div class="line line-next" id="lineNext"></div>
+        </div>
+
+        <!-- 进度滑动条 -->
+        <div class="seek-bar-wrap" id="seekWrap">
+            <span class="line-num" id="lineNum">1/32</span>
+            <input type="range" class="seek-bar" id="seekBar" min="0" max="31" value="0" step="1">
+        </div>
+
+        <div class="hint" id="hint"></div>
+
+        <div class="end-decoration" id="endDeco">&#10045; &#10045; &#10045;</div>
+        <button id="replayBtn">重新播放</button>
+    </div>
+
+    <div class="font-bar" id="fontBar">
+        <button class="font-btn active" data-font="'Noto Sans SC', sans-serif" style="font-family:'Noto Sans SC',sans-serif">黑体</button>
+        <button class="font-btn" data-font="'Noto Serif SC', serif" style="font-family:'Noto Serif SC',serif">宋体</button>
+        <button class="font-btn" data-font="'Ma Shan Zheng', cursive" style="font-family:'Ma Shan Zheng',cursive">楷书</button>
+        <button class="font-btn" data-font="'ZCOOL XiaoWei', serif" style="font-family:'ZCOOL XiaoWei',serif">文艺</button>
+        <button class="font-btn" data-font="'ZCOOL QingKe HuangYou', sans-serif" style="font-family:'ZCOOL QingKe HuangYou',sans-serif">黄油</button>
+    </div>
+
+<script>
+const TITLE = '我的心儿蹦蹦跳';
+const AUTHOR = '白昊辰';
+const LINES = [
+    '在我成长的道路上，',
+    '第一次尝试着一个人睡觉，',
+    '忐忑不安的心情让我心跳加速的一个晚上。',
+    '',
+    '八岁那年的一个夏天，',
+    '天气比较炎热，',
+    '我认为我长大了，要学会独立，',
+    '尝试着独自一人睡觉。',
+    '洗漱完后，我来到房间，',
+    '双脚一蹬跳到柔软的床上，',
+    '双手伸直，迈开双脚，',
+    '在床上摆出了一个"大"字。',
+    '我当时认为独自睡觉也不怎么可怕，',
+    '可是我一关灯，',
+    '乌漆抹黑的颜色加上外面的蝉叫声，',
+    '让我毛骨悚然。',
+    '我仿佛看到了一个个怪物，',
+    '我不停的默念：',
+    '"世界上没有怪物，不要自己吓自己了！"',
+    '我的心跳慢慢的平静下来，',
+    '可是我还是很害怕，始终也没有睡着。',
+    '我起身打开电风扇，',
+    '灵机一动决定让"小度"播放催眠曲，',
+    '"小度"在那里播放着轻缓的催眠曲，',
+    '阵阵微风吹来，',
+    '我慢慢的进入了梦乡。',
+    '',
+    '我醒来时阳光已经洒满房间，',
+    '我惊喜地发现自己居然没有梦境的',
+    '睡了一个晚上，',
+    '这次经历虽然让我体验了紧张与害怕，',
+    '但我学会了独立与勇敢。'
+];
+const TOTAL = LINES.length;
+
+// --- 字体切换 ---
+let currentFont = "'Noto Sans SC', sans-serif";
+document.getElementById('fontBar').addEventListener('click', (e) => {
+    const btn = e.target.closest('.font-btn');
+    if (!btn) return;
+    document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFont = btn.dataset.font;
+    document.querySelectorAll('.line').forEach(el => { el.style.fontFamily = currentFont; });
+    titleEl.style.fontFamily = currentFont;
+});
+
+// --- 粒子 ---
+(function() {
+    const c = document.getElementById('particles');
+    for (let i = 0; i < 25; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.width = p.style.height = (Math.random() * 4 + 2) + 'px';
+        p.style.animationDuration = (Math.random() * 8 + 6) + 's';
+        p.style.animationDelay = (Math.random() * 10) + 's';
+        c.appendChild(p);
+    }
+})();
+
+// --- 背景音乐 ---
+const bgAudio = new Audio('bgm.mp3');
+bgAudio.loop = true;
+bgAudio.volume = 0.5;
+let musicOn = true;
+
+const musicBtn = document.getElementById('musicBtn');
+musicBtn.addEventListener('click', () => {
+    if (musicOn) {
+        bgAudio.pause();
+        musicOn = false;
+        musicBtn.classList.remove('on', 'music-on');
+    } else {
+        bgAudio.play();
+        musicOn = true;
+        musicBtn.classList.add('on', 'music-on');
+    }
+});
+
+// --- 朗诵控制 ---
+let voiceOn = true;
+const voiceBtn = document.getElementById('voiceBtn');
+voiceBtn.addEventListener('click', () => {
+    voiceOn = !voiceOn;
+    voiceBtn.classList.toggle('on', voiceOn);
+    if (!voiceOn) speechSynthesis.cancel();
+});
+
+// --- 语音朗读（男声） ---
+let maleVoice = null;
+function loadVoices() {
+    const voices = speechSynthesis.getVoices();
+    maleVoice = voices.find(v => /kangkang|yunxi|yunyang|male/i.test(v.name) && v.lang.startsWith('zh'))
+              || voices.find(v => /kangkang/i.test(v.name))
+              || voices.find(v => /yunxi/i.test(v.name))
+              || voices.find(v => /yunyang/i.test(v.name))
+              || voices.find(v => v.lang.startsWith('zh-CN'))
+              || null;
+}
+loadVoices();
+if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
+
+function speak(id, text) {
+    return new Promise(resolve => {
+        if (!alive(id) || !voiceOn || !window.speechSynthesis) { resolve(); return; }
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'zh-CN';
+        utter.rate = 0.85;
+        utter.pitch = 0.85;
+        if (maleVoice) utter.voice = maleVoice;
+        speechSynthesis.speak(utter);
+        utter.onend = resolve;
+        utter.onerror = resolve;
+        // 被新的 playId 取代时立即结束
+        const check = setInterval(() => {
+            if (!alive(id)) { clearInterval(check); speechSynthesis.cancel(); resolve(); }
+        }, 80);
+        utter.onend = () => { clearInterval(check); resolve(); };
+        utter.onerror = () => { clearInterval(check); resolve(); };
+    });
+}
+
+// --- 逐字动画 ---
+function animateText(id, el, text, charDelay) {
+    return new Promise(resolve => {
+        if (!alive(id)) { resolve(); return; }
+        el.innerHTML = '';
+        el.style.fontFamily = currentFont;
+        const chars = text.split('');
+        chars.forEach((ch, i) => {
+            const span = document.createElement('span');
+            span.className = 'char';
+            span.textContent = ch;
+            span.style.animationDelay = (i * charDelay / 1000) + 's';
+            el.appendChild(span);
+        });
+        const timer = setTimeout(resolve, chars.length * charDelay + 500);
+        // 被取代时提前结束
+        const check = setInterval(() => {
+            if (!alive(id)) { clearInterval(check); clearTimeout(timer); resolve(); }
+        }, 80);
+    });
+}
+
+// --- 3行字幕 ---
+const linePrev = document.getElementById('linePrev');
+const lineCur  = document.getElementById('lineCur');
+const lineNext = document.getElementById('lineNext');
+
+function showStatic(el, text, cls) {
+    el.className = 'line ' + cls;
+    el.style.fontFamily = currentFont;
+    if (!text) { el.innerHTML = ''; el.classList.add('line-empty'); }
+    else { el.textContent = text; }
+}
+
+// --- DOM引用 ---
+const startBtn = document.getElementById('startBtn');
+const stage = document.getElementById('stage');
+const titleEl = document.getElementById('titleEl');
+const authorEl = document.getElementById('authorEl');
+const hint = document.getElementById('hint');
+const endDeco = document.getElementById('endDeco');
+const fontBar = document.getElementById('fontBar');
+const topControls = document.getElementById('topControls');
+const replayBtn = document.getElementById('replayBtn');
+const seekBar = document.getElementById('seekBar');
+const seekWrap = document.getElementById('seekWrap');
+const lineNum = document.getElementById('lineNum');
+
+// --- 播放控制（用 playId 隔离新旧流程） ---
+let playId = 0;
+let isSeeking = false;
+
+seekBar.max = TOTAL - 1;
+
+seekBar.addEventListener('input', () => {
+    isSeeking = true;
+    lineNum.textContent = (parseInt(seekBar.value) + 1) + '/' + TOTAL;
+});
+
+seekBar.addEventListener('change', () => {
+    const target = parseInt(seekBar.value);
+    isSeeking = false;
+    speechSynthesis.cancel();
+    // 加倍 playId 让旧流程的所有 alive() 返回 false
+    playId++;
+    speechSynthesis.cancel();
+    playFrom(target);
+});
+
+function alive(id) { return id === playId; }
+
+function updateSeek(id, i) {
+    if (alive(id) && !isSeeking) {
+        seekBar.value = i;
+        lineNum.textContent = (i + 1) + '/' + TOTAL;
+    }
+}
+
+// --- 主播放流程 ---
+async function play() {
+    const id = ++playId;
+    speechSynthesis.cancel();
+    resetUI();
+
+    startBtn.style.display = 'none';
+    stage.style.display = 'flex';
+    topControls.classList.add('show');
+    seekWrap.classList.add('show');
+    fontBar.classList.add('show');
+
+    if (musicOn) {
+        bgAudio.currentTime = 0;
+        bgAudio.play();
+    }
+
+    // 标题
+    titleEl.style.fontFamily = currentFont;
+    await animateText(id, titleEl, TITLE, 150);
+    if (!alive(id)) return;
+    await speak(id, TITLE);
+    if (!alive(id)) return;
+    authorEl.textContent = AUTHOR;
+    authorEl.style.animation = 'fadeIn 1s ease forwards';
+    await delay(id, 1200);
+    if (!alive(id)) return;
+
+    await playBody(id, 0);
+}
+
+async function playFrom(startIdx) {
+    const id = ++playId;
+    resetUI();
+
+    startBtn.style.display = 'none';
+    stage.style.display = 'flex';
+    topControls.classList.add('show');
+    seekWrap.classList.add('show');
+    fontBar.classList.add('show');
+
+    titleEl.textContent = TITLE;
+    titleEl.style.fontFamily = currentFont;
+    authorEl.textContent = AUTHOR;
+    authorEl.style.opacity = '1';
+
+    await playBody(id, startIdx);
+}
+
+async function playBody(id, startIdx) {
+    for (let i = startIdx; i < LINES.length; i++) {
+        if (!alive(id)) return;
+        updateSeek(id, i);
+
+        const prev = LINES[i - 1] || '';
+        const cur  = LINES[i];
+        const next = LINES[i + 1] || '';
+
+        showStatic(linePrev, prev, 'line-prev');
+
+        if (cur === '') {
+            showStatic(lineCur, '', 'line-current line-empty');
+            await delay(id, 400);
+            continue;
+        }
+
+        lineNext.className = 'line line-next';
+        lineNext.style.fontFamily = currentFont;
+        lineNext.textContent = next || '';
+        if (!next) lineNext.classList.add('line-empty');
+
+        const charDelay = cur.length > 15 ? 55 : 75;
+        await animateText(id, lineCur, cur, charDelay);
+        if (!alive(id)) return;
+
+        await speak(id, cur);
+        if (!alive(id)) return;
+        await delay(id, 200);
+    }
+
+    // 结束
+    linePrev.innerHTML = '';
+    lineCur.innerHTML = '';
+    lineNext.innerHTML = '';
+    endDeco.classList.add('show');
+    hint.textContent = '— 全文完 —';
+    hint.style.animation = 'fadeIn 1.5s ease forwards';
+    replayBtn.style.display = 'inline-block';
+    seekBar.value = TOTAL - 1;
+    lineNum.textContent = TOTAL + '/' + TOTAL;
+}
+
+function resetUI() {
+    titleEl.innerHTML = '';
+    authorEl.textContent = '';
+    authorEl.style.animation = '';
+    authorEl.style.opacity = '';
+    linePrev.innerHTML = '';
+    lineCur.innerHTML = '';
+    lineNext.innerHTML = '';
+    hint.textContent = '';
+    hint.style.animation = '';
+    endDeco.classList.remove('show');
+    replayBtn.style.display = 'none';
+    seekBar.value = 0;
+    lineNum.textContent = '1/' + TOTAL;
+}
+
+startBtn.addEventListener('click', play);
+
+replayBtn.addEventListener('click', () => {
+    speechSynthesis.cancel();
+    play();
+});
+
+function delay(id, ms) {
+    return new Promise(resolve => {
+        if (!alive(id)) { resolve(); return; }
+        const timer = setTimeout(resolve, ms);
+        const check = setInterval(() => {
+            if (!alive(id)) { clearInterval(check); clearTimeout(timer); resolve(); }
+        }, 80);
+    });
+}
+</script>
+</body>
+</html>
